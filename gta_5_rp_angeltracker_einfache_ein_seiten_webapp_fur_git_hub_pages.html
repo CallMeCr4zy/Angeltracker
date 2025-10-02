@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GTA5 RP – Angeltracker</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#121821; --muted:#8aa0b3; --text:#e6eef6; --accent:#4cc9f0; --line:#1f2a38;
+      --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font:16px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#0b0f14,#0a0d12 60%,#0b0f14);color:var(--text)}
+    .container{max-width:1100px;margin:32px auto;padding:0 16px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    header h1{font-size:clamp(22px,3vw,28px);margin:0;font-weight:700;letter-spacing:.2px}
+    header .actions{margin-left:auto;display:flex;gap:8px}
+    button{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 12px;border-radius:12px;cursor:pointer;transition:.15s transform ease,.15s background ease,.15s border ease;}
+    button:hover{transform:translateY(-1px);border-color:#2c3a4e}
+    button:active{transform:translateY(0)}
+    .btn-accent{background:var(--accent);border-color:transparent;color:#001220;font-weight:700}
+    .grid{display:grid;grid-template-columns:1fr;gap:18px}
+    @media (min-width:930px){.grid{grid-template-columns:1fr 1fr}}
+
+    .card{background:rgba(18,24,33,.9);border:1px solid var(--line);border-radius:18px;box-shadow:0 6px 28px rgba(0,0,0,.35)}
+    .card h2{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-size:18px}
+    table{width:100%;border-collapse:collapse}
+    thead th{font-weight:700;color:var(--muted);text-align:left;font-size:13px;padding:10px 12px;border-bottom:1px solid var(--line)}
+    tbody td{padding:10px 12px;border-bottom:1px dashed #1a2330}
+    tbody tr:last-child td{border-bottom:0}
+    .name{white-space:nowrap}
+    .pluscell{width:70px}
+    .countcell{width:90px;text-align:right}
+    .pctcell{width:110px;text-align:right}
+
+    .plus{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:12px;border:1px solid #243247;background:#121926;color:#d7e7f6;font-weight:900;font-size:18px}
+    .plus:hover{background:#1a2330}
+    .plus:active{transform:translateY(1px)}
+
+    .footerCard{margin-top:18px}
+    .sumline{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px 16px;border-top:1px solid var(--line);border-radius:0 0 18px 18px;color:var(--muted)}
+    .sumline strong{color:var(--text)}
+
+    .pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#132031;border:1px solid #203045;color:#9db6c8;font-size:12px}
+    .muted{color:var(--muted)}
+    .kicker{font-size:12px;color:#9ab;}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎣 GTA5-RP Angeltracker</h1>
+      <div class="actions">
+        <button id="exportBtn">Export (JSON)</button>
+        <button id="importBtn">Import</button>
+        <input class="hidden" type="file" id="fileInput" accept="application/json" />
+        <button id="resetBtn" class="">Alles zurücksetzen</button>
+        <button id="saveBtn" class="btn-accent">Speichern</button>
+      </div>
+    </header>
+
+    <p class="kicker">Tipp: Klicke auf <strong>+</strong>, um die Anzahl zu erhöhen. Prozentwerte passen sich automatisch an. Daten werden lokal gespeichert (LocalStorage). Du kannst zusätzlich exportieren/importieren.</p>
+
+    <div class="grid">
+      <section class="card" id="fishCard">
+        <h2>Fische</h2>
+        <div class="table-wrap">
+          <table id="fishTable" aria-label="Fische">
+            <thead>
+              <tr><th>Name</th><th class="pluscell">Plus</th><th class="countcell">Anzahl</th><th class="pctcell">Prozente</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="sumline"><span>Gesamt Fische</span><span><strong id="fishTotal">0</strong> &nbsp;|&nbsp; <span id="fishPctTotal" class="pill">100%</span></span></div>
+      </section>
+
+      <section class="card" id="itemCard">
+        <h2>Gegenstände</h2>
+        <div class="table-wrap">
+          <table id="itemTable" aria-label="Gegenstände">
+            <thead>
+              <tr><th>Name</th><th class="pluscell">Plus</th><th class="countcell">Anzahl</th><th class="pctcell">Prozente</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="sumline"><span>Gesamt Gegenstände</span><span><strong id="itemTotal">0</strong> &nbsp;|&nbsp; <span id="itemPctTotal" class="pill">100%</span></span></div>
+      </section>
+    </div>
+
+    <section class="card footerCard">
+      <h2>Allgemein</h2>
+      <div class="sumline"><span>Gesamt (Fische + Gegenstände)</span><span><strong id="grandTotal">0</strong> &nbsp;|&nbsp; <span class="pill">100%</span></span></div>
+    </section>
+  </div>
+
+  <script>
+  // =================== Konfiguration ===================
+  const CONFIG = {
+    fish: [
+      'Forelle','Brasse','Zander','Aal','Karpfen','Hecht','Babystör','Stör','Trächtiger Stör'
+    ],
+    items: [
+      'Gold Taler','Krücke','Alge','Spraydose','Metalldose','Kartoffelsack','Glasflasche','-','-'
+    ],
+    storageKey: 'gta5rp-angeltracker-v1'
+  };
+
+  // ================ Zustand & Persistenz =================
+  let state = loadState() || {
+    fish: Object.fromEntries(CONFIG.fish.map(n => [n, 0])),
+    items: Object.fromEntries(CONFIG.items.map(n => [n, 0]))
+  };
+
+  function loadState(){
+    try{ return JSON.parse(localStorage.getItem(CONFIG.storageKey)); }catch(e){ return null }
+  }
+  function saveState(){
+    localStorage.setItem(CONFIG.storageKey, JSON.stringify(state));
+    flashSave();
+    render();
+  }
+  function resetAll(){
+    if(!confirm('Wirklich alles auf 0 zurücksetzen?')) return;
+    state = { fish: Object.fromEntries(CONFIG.fish.map(n => [n, 0])), items: Object.fromEntries(CONFIG.items.map(n => [n, 0])) };
+    saveState();
+  }
+
+  // =================== UI Rendering =====================
+  const fishBody = document.querySelector('#fishTable tbody');
+  const itemBody = document.querySelector('#itemTable tbody');
+  const fishTotalEl = document.getElementById('fishTotal');
+  const itemTotalEl = document.getElementById('itemTotal');
+  const fishPctTotalEl = document.getElementById('fishPctTotal');
+  const itemPctTotalEl = document.getElementById('itemPctTotal');
+  const grandTotalEl = document.getElementById('grandTotal');
+
+  function buildRow(name, group){
+    const tr = document.createElement('tr');
+    const tdName = document.createElement('td'); tdName.textContent = name; tdName.className='name';
+    const tdPlus = document.createElement('td'); tdPlus.className='pluscell';
+    const tdCount = document.createElement('td'); tdCount.className='countcell';
+    const tdPct = document.createElement('td'); tdPct.className='pctcell';
+
+    const btn = document.createElement('button'); btn.className='plus'; btn.type='button'; btn.setAttribute('aria-label', `+1 ${name}`); btn.textContent = '+';
+    btn.addEventListener('click', ()=>{ increment(group,name); });
+    tdPlus.appendChild(btn);
+
+    tr.append(tdName, tdPlus, tdCount, tdPct);
+
+    return { tr, tdCount, tdPct };
+  }
+
+  function render(){
+    // Fische
+    fishBody.innerHTML='';
+    let fishTotal = 0;
+    CONFIG.fish.forEach(name => {
+      const {tr, tdCount, tdPct} = buildRow(name,'fish');
+      const val = state.fish[name]||0; fishTotal += val;
+      tdCount.textContent = val;
+      tdPct.textContent = percentText(val, 0); // Update nach Gesamtberechnung
+      fishBody.appendChild(tr);
+    });
+    // Prozente Fische aktualisieren
+    [...fishBody.querySelectorAll('tr')].forEach((tr,i)=>{
+      const name = CONFIG.fish[i];
+      const val = state.fish[name]||0;
+      tr.children[3].textContent = percentText(val, fishTotal);
+    });
+
+    // Gegenstände
+    itemBody.innerHTML='';
+    let itemTotal = 0;
+    CONFIG.items.forEach(name => {
+      const {tr, tdCount, tdPct} = buildRow(name,'items');
+      const val = state.items[name]||0; itemTotal += val;
+      tdCount.textContent = val;
+      tdPct.textContent = percentText(val, 0);
+      itemBody.appendChild(tr);
+    });
+    [...itemBody.querySelectorAll('tr')].forEach((tr,i)=>{
+      const name = CONFIG.items[i];
+      const val = state.items[name]||0;
+      tr.children[3].textContent = percentText(val, itemTotal);
+    });
+
+    // Summen
+    fishTotalEl.textContent = fishTotal;
+    itemTotalEl.textContent = itemTotal;
+    fishPctTotalEl.textContent = '100%';
+    itemPctTotalEl.textContent = '100%';
+    grandTotalEl.textContent = fishTotal + itemTotal;
+  }
+
+  function percentText(value, total){
+    if(!total) return '0%';
+    const pct = (value / total) * 100;
+    return `${pct.toFixed(1).replace('.', ',')}%`;
+  }
+
+  // =================== Logik ============================
+  function increment(group,name){
+    state[group][name] = (state[group][name]||0) + 1;
+    saveState();
+  }
+
+  // =================== Export/Import ====================
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'angeltracker.json'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 500);
+  });
+  document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('fileInput').click());
+  document.getElementById('fileInput').addEventListener('change', (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        if(!data.fish || !data.items) throw new Error('Ungültiges Format');
+        state = data; saveState();
+      }catch(err){ alert('Import fehlgeschlagen: '+err.message); }
+    };
+    reader.readAsText(file);
+  });
+
+  // =================== Buttons oben =====================
+  document.getElementById('saveBtn').addEventListener('click', saveState);
+  document.getElementById('resetBtn').addEventListener('click', resetAll);
+  function flashSave(){
+    const b = document.getElementById('saveBtn');
+    b.textContent='Gespeichert';
+    setTimeout(()=> b.textContent='Speichern', 900);
+  }
+
+  // Initial render
+  render();
+  </script>
+</body>
+</html>
